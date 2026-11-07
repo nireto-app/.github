@@ -1,0 +1,38 @@
+name: Shared security action
+on:
+  pull_request:
+    paths: ['actions/security-scan/**', 'tests/**', '.github/workflows/security-action.yml']
+  push:
+    branches: [main]
+    paths: ['actions/security-scan/**', 'tests/**', '.github/workflows/security-action.yml']
+permissions:
+  contents: read
+jobs:
+  contracts:
+    name: Shared scanner failure contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash -n actions/security-scan/*.sh tests/security-scan.sh
+      - run: bash tests/security-scan.sh
+  smoke:
+    name: Pinned scanner smoke (${{ matrix.scanner }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        scanner: [gitleaks, semgrep]
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install pinned scanner
+        env:
+          SCANNER: ${{ matrix.scanner }}
+        run: |
+          bash actions/security-scan/install.sh "$SCANNER"
+          echo "$RUNNER_TEMP/nireto-security/bin" >> "$GITHUB_PATH"
+      - name: Verify clean and seeded-defect fixtures
+        env:
+          SCANNER: ${{ matrix.scanner }}
+        run: bash tests/security-smoke.sh "$SCANNER"
