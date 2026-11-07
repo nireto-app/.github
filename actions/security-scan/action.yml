@@ -1,0 +1,24 @@
+name: Pinned security scan
+description: Run the shared gitleaks or Semgrep gate on a checked-out repository
+inputs:
+  scanner:
+    description: gitleaks or semgrep
+    required: true
+  baseline:
+    description: Full commit SHA for Semgrep new findings; empty scans the full tree
+    required: false
+    default: ''
+runs:
+  using: composite
+  steps:
+    - name: Install and run the scanner
+      shell: bash
+      env:
+        SCANNER: ${{ inputs.scanner }}
+        BASELINE: ${{ inputs.baseline }}
+        ACTION_ROOT: ${{ github.action_path }}
+      run: |
+        set -euo pipefail
+        bash "$ACTION_ROOT/install.sh" "$SCANNER"
+        export PATH="$RUNNER_TEMP/nireto-security/bin:$PATH"
+        bash "$ACTION_ROOT/scan.sh" "$SCANNER" "$BASELINE"
